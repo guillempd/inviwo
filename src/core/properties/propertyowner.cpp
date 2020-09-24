@@ -104,6 +104,12 @@ void PropertyOwner::insertProperty(size_t index, Property& property) {
     insertProperty(index, &property, false);
 }
 
+void PropertyOwner::clearProperties() {
+    while (properties_.size() > 0) {
+        removeProperty(properties_.size() - 1);
+    }
+}
+
 Property* PropertyOwner::removeProperty(const std::string& identifier) {
     return removeProperty(
         std::find_if(properties_.begin(), properties_.end(),
