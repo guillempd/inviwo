@@ -42,7 +42,6 @@
 #include <modules/basegl/raycasting/sampletransformcomponent.h>
 #include <modules/basegl/raycasting/volumecomponent.h>
 
-
 namespace inviwo {
 
 /** \docpage{org.inviwo.StandardVolumeRaycaster, Standard Volume Raycaster}
