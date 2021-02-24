@@ -83,6 +83,7 @@ public:
      */
     virtual void insertProperty(size_t index, Property& property);
 
+    virtual void clearProperties();
     virtual Property* removeProperty(const std::string& identifier);
     virtual Property* removeProperty(Property* property);
     virtual Property* removeProperty(Property& property);
