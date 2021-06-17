@@ -40,6 +40,8 @@
 #include <inviwopy/pynetwork.h>
 #include <inviwopy/pyprocessors.h>
 #include <inviwopy/pyglmtypes.h>
+#include <inviwopy/pyglmmattypes.h>
+#include <inviwopy/pyglmports.h>
 #include <inviwopy/pyport.h>
 #include <inviwopy/pyproperties.h>
 #include <inviwopy/pypropertyowner.h>
@@ -63,10 +65,6 @@
 
 namespace py = pybind11;
 
-PYBIND11_MAKE_OPAQUE(std::vector<int>)
-PYBIND11_MAKE_OPAQUE(std::vector<float>)
-PYBIND11_MAKE_OPAQUE(std::vector<double>)
-
 PYBIND11_MODULE(inviwopy, m) {
 
 #ifdef IVW_ENABLE_MSVC_MEM_LEAK_TEST
@@ -75,15 +73,16 @@ PYBIND11_MODULE(inviwopy, m) {
 
     using namespace inviwo;
     m.doc() = "Python interface for Inviwo";
-
-    exposeGLMTypes(m);
-
+    auto glmModule = m.def_submodule("glm", "Exposing glm vec and mat types");
     auto propertiesModule = m.def_submodule("properties", "Exposing various Inviwo Properties");
     auto dataModule =
         m.def_submodule("data", "Module containing class mapping to the Inviwo data structures");
     auto formatsModule =
         dataModule.def_submodule("formats", "Module containing the various data formats");
 
+    // Note the order is important here, we need to load all base classes before any derived clases
+    exposeGLMTypes(glmModule);
+    exposeGLMMatTypes(glmModule);
     exposeLogging(m);
     exposeInviwoApplication(m);
     exposeDataFormat(formatsModule);
@@ -95,6 +94,7 @@ PYBIND11_MODULE(inviwopy, m) {
     exposeEvents(m);
     exposePickingMapper(m);
 
+    exposeGLMPorts(m);
     exposeDataMapper(dataModule);
     exposeImage(dataModule);
     exposeVolume(dataModule);
@@ -105,7 +105,7 @@ PYBIND11_MODULE(inviwopy, m) {
     exposeInviwoModule(m);
     exposeCameraProperty(m, propertiesModule);
 
-    py::class_<Settings, PropertyOwner, std::unique_ptr<Settings, py::nodelete>>(m, "Settings");
+    py::class_<Settings, PropertyOwner>(m, "Settings");
 
     m.def("debugBreak", []() { util::debugBreak(); });
 

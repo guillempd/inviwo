@@ -87,7 +87,7 @@ void exposeMesh(pybind11::module& m) {
         return list;
     };
 
-    py::class_<Mesh, std::shared_ptr<Mesh>>(m, "Mesh")
+    py::class_<Mesh>(m, "Mesh")
         .def(py::init<>())
         .def(py::init<DrawType, ConnectivityType>(), py::arg("dt"), py::arg("ct"))
         .def(py::init<Mesh::MeshInfo>(), py::arg("meshInfo"))
@@ -170,7 +170,7 @@ void exposeMesh(pybind11::module& m) {
             return BasicMesh::Vertex{pos, normal, tex, color};
         }));
 
-    py::class_<BasicMesh, Mesh, std::shared_ptr<BasicMesh>>(m, "BasicMesh")
+    py::class_<BasicMesh, Mesh>(m, "BasicMesh")
         .def(py::init<>())
         .def("addVertices", &BasicMesh::addVertices)
 

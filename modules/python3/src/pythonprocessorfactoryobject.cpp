@@ -39,6 +39,8 @@
 #include <iostream>
 #include <sstream>
 
+#include <modules/python3/processortrampoline.h>
+
 #include <warn/push>
 #include <warn/ignore/shadow>
 #include <pybind11/pybind11.h>
@@ -52,20 +54,19 @@ namespace inviwo {
 PythonProcessorFactoryObject::PythonProcessorFactoryObject(InviwoApplication* app,
                                                            const std::string& file)
     : PythonProcessorFactoryObjectBase(load(file)), FileObserver(app), app_{app} {
-
     startFileObservation(file);
 }
 
-std::unique_ptr<Processor> PythonProcessorFactoryObject::create(InviwoApplication*) {
+std::shared_ptr<Processor> PythonProcessorFactoryObject::create(InviwoApplication*) {
     namespace py = pybind11;
-    const auto pi = getProcessorInfo();
-
+    const auto& pi = getProcessorInfo();
+    
     try {
-        py::object proc = py::eval<py::eval_expr>(fmt::format(
-            R"({}("{}", "{}"))", name_, util::stripIdentifier(pi.displayName), pi.displayName));
-        auto p = std::unique_ptr<Processor>(proc.cast<Processor*>());
-        proc.release();
-        return p;
+        py::object proc =
+            py::module::import("__main__")
+                .attr(name_.c_str())(util::stripIdentifier(pi.displayName), pi.displayName);
+        auto shared = proc.cast<std::shared_ptr<Processor>>();
+        return shared;
 
     } catch (std::exception& e) {
         throw Exception(
@@ -91,13 +92,14 @@ void PythonProcessorFactoryObject::fileChanged(const std::string&) {
 
 void PythonProcessorFactoryObject::reloadProcessors() {
     auto net = app_->getProcessorNetwork();
-    auto processors = net->getProcessors();
+    auto processors = net->getProcessors();  // Save a list of the processors here since we will be
+                                             // modifying the list below by replacing them
     for (auto p : processors) {
         if (p->getClassIdentifier() == getProcessorInfo().classIdentifier) {
             LogInfo("Updating python processor: \"" << name_ << "\" id: \"" << p->getIdentifier()
                                                     << "\"");
             if (auto replacement = create(app_)) {
-                util::replaceProcessor(net, std::move(replacement), p);
+                util::replaceProcessor(net, replacement, p);
             }
         }
     }
@@ -111,7 +113,7 @@ PythonProcessorFactoryObjectData PythonProcessorFactoryObject::load(const std::s
     ss << ifs.rdbuf();
     const auto script = std::move(ss).str();
 
-    const auto nameLabel = std::string{"# Name: "};
+    constexpr std::string_view nameLabel{"# Name: "};
 
     const auto name = [&]() {
         if (script.compare(0, nameLabel.size(), nameLabel) == 0) {
@@ -124,26 +126,37 @@ PythonProcessorFactoryObjectData PythonProcessorFactoryObject::load(const std::s
 
     try {
         py::exec(script);
+    } catch (const pybind11::error_already_set& e) {
+        if (e.matches(PyExc_ImportError)) {
+            auto pythonModule = e.value().attr("name").cast<std::string>();
+            throw Exception(
+                fmt::format("Failed to register processor {}, python module '{}' missing, file {}",
+                            name, pythonModule, file),
+                IVW_CONTEXT_CUSTOM("Python"));
+        } else {
+            throw Exception(
+                "Failed to register processor " + name + " from file: " + file + ".\n" + e.what(),
+                IVW_CONTEXT_CUSTOM("Python"));
+        }
     } catch (const std::exception& e) {
         throw Exception(
-            "Failed to load processor " + name + " from script: " + file + ".\n" + e.what(),
+            "Failed to register processor " + name + " from file: " + file + ".\n" + e.what(),
             IVW_CONTEXT_CUSTOM("Python"));
     }
 
     if (!py::globals().contains(name.c_str())) {
         throw Exception(
-            "Failed to find python processor \"" + name + "\" in pythons object register",
+            "Failed to register python processor \"" + name + "\" in pythons object register",
             IVW_CONTEXT_CUSTOM("Python"));
     }
 
     try {
         py::object proc = py::eval<py::eval_expr>(name + ".processorInfo()");
         auto p = proc.cast<ProcessorInfo>();
-        proc.release();
         return {p, name, file};
     } catch (const std::exception& e) {
         throw Exception("Failed to get processor info for processor " + name +
-                            " from script: " + file + ".\n" + e.what(),
+                            " from file: " + file + ".\n" + e.what(),
                         IVW_CONTEXT_CUSTOM("Python"));
     }
 }
