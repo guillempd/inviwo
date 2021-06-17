@@ -39,19 +39,19 @@ namespace inviwo {
 class InviwoApplication;
 
 class IVW_CORE_API ProcessorFactory
-    : public Factory<Processor>,
-      public StandardFactory<Processor, ProcessorFactoryObject, const std::string&,
-                             InviwoApplication*> {
-    using Parent =
-        StandardFactory<Processor, ProcessorFactoryObject, const std::string&, InviwoApplication*>;
+    : public SharedFactory<Processor, std::string_view>,
+      public SharedStandardFactory<Processor, ProcessorFactoryObject, std::string, std::string_view,
+                                   InviwoApplication*> {
+    using Parent = SharedStandardFactory<Processor, ProcessorFactoryObject, std::string,
+                                         std::string_view, InviwoApplication*>;
 
 public:
     ProcessorFactory(InviwoApplication* app);
     virtual ~ProcessorFactory() = default;
     bool registerObject(ProcessorFactoryObject* processor) override;
     using Parent::create;
-    virtual std::unique_ptr<Processor> create(const std::string& key) const override;
-    virtual bool hasKey(const std::string& key) const override;
+    virtual std::shared_ptr<Processor> create(std::string_view key) const override;
+    virtual bool hasKey(std::string_view key) const override;
 
 private:
     InviwoApplication* app_;

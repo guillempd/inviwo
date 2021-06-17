@@ -27,13 +27,14 @@
  *
  *********************************************************************************/
 
-#ifndef IVW_PROCESSORLISTWIDGET_H
-#define IVW_PROCESSORLISTWIDGET_H
+#pragma once
 
 #include <inviwo/qt/editor/inviwoqteditordefine.h>
 #include <modules/qtwidgets/inviwodockwidget.h>
 #include <inviwo/core/processors/processorfactoryobject.h>
 #include <inviwo/core/processors/processorfactory.h>
+
+#include <optional>
 
 #include <warn/push>
 #include <warn/ignore/all>
@@ -69,12 +70,13 @@ public:
 protected:
     virtual void mousePressEvent(QMouseEvent* e) override;
     virtual void mouseMoveEvent(QMouseEvent* e) override;
+    virtual void mouseReleaseEvent(QMouseEvent* e) override;
 
 private:
     void showContextMenu(const QPoint& p);
 
     ProcessorTreeWidget* processorTreeWidget_;
-    QPoint dragStartPosition_;
+    std::optional<QPoint> dragStartPosition_;
 };
 
 class IVW_QTEDITOR_API ProcessorTreeItem : public QTreeWidgetItem {
@@ -97,7 +99,7 @@ public:
     void addProcessorsToTree(ProcessorFactoryObject* item = nullptr);
     void recordProcessorUse(const std::string& id);
 
-    std::unique_ptr<Processor> createProcessor(QString cid);
+    std::shared_ptr<Processor> createProcessor(QString cid);
 
     Grouping getGrouping() const;
 
@@ -141,9 +143,7 @@ private:
 
 class IVW_QTEDITOR_API ProcessorDragObject : public QDrag {
 public:
-    ProcessorDragObject(QWidget* source, std::unique_ptr<Processor> processor);
+    ProcessorDragObject(QWidget* source, std::shared_ptr<Processor> processor);
 };
 
 }  // namespace inviwo
-
-#endif  // IVW_PROCESSORLISTWIDGET_H

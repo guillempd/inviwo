@@ -46,6 +46,7 @@
 #include <bitset>
 #include <array>
 #include <vector>
+#include <unordered_map>
 
 #include <fmt/format.h>
 
@@ -54,6 +55,7 @@ namespace inviwo {
 class Serializable;
 class VersionConverter;
 class InviwoApplication;
+template <typename T>
 class FactoryBase;
 template <typename T, typename K>
 class ContainerWrapper;
@@ -250,6 +252,9 @@ public:
     template <class T>
     void deserialize(std::string_view key, std::unique_ptr<T>& data);
 
+    template <class T>
+    void deserialize(std::string_view key, std::shared_ptr<T>& data);
+
     template <class Base, class T>
     void deserializeAs(std::string_view key, std::unique_ptr<T>& data);
 
@@ -279,7 +284,7 @@ public:
     template <typename T, typename K>
     friend class ContainerWrapper;
 
-    void registerFactory(FactoryBase* factory);
+    void registerFactory(FactoryBase<std::string_view>* factory);
 
     int getInviwoWorkspaceVersion() const;
 
@@ -296,7 +301,7 @@ private:
     TxElement* retrieveChild(std::string_view key);
 
     ExceptionHandler exceptionHandler_;
-    std::vector<FactoryBase*> registeredFactories_;
+    std::vector<FactoryBase<std::string_view>*> registeredFactories_;
 
     int inviwoWorkspaceVersion_ = 0;
 };
@@ -606,21 +611,6 @@ private:
 };
 
 }  // namespace util
-
-template <typename T>
-T* Deserializer::getRegisteredType(std::string_view className) {
-    for (auto base : registeredFactories_) {
-        if (auto factory = dynamic_cast<Factory<T>*>(base)) {
-            if (auto data = factory->create(std::string(className))) return data.release();
-        }
-    }
-    return nullptr;
-}
-
-template <typename T>
-T* Deserializer::getNonRegisteredType() {
-    return util::defaultConstructType<T>();
-}
 
 template <typename T>
 class DeserializationErrorHandle {
@@ -1117,6 +1107,23 @@ void Deserializer::deserialize(std::string_view key, std::unordered_map<K, V, H,
     });
 }
 
+template <typename T>
+T* Deserializer::getRegisteredType(std::string_view className) {
+    for (auto base : registeredFactories_) {
+        if (base->hasKey(className)) {
+            if (auto factory = dynamic_cast<UniqueFactory<T>*>(base)) {
+                if (auto data = factory->create(className)) return data.release();
+            }
+        }
+    }
+    return nullptr;
+}
+
+template <typename T>
+T* Deserializer::getNonRegisteredType() {
+    return util::defaultConstructType<T>();
+}
+
 template <class T>
 void Deserializer::deserialize(std::string_view key, T*& data) {
     static_assert(detail::canDeserialize<T>(), "Type is not serializable");
@@ -1185,6 +1192,73 @@ void Deserializer::deserialize(std::string_view key, std::unique_ptr<T>& data) {
         T* ptr = nullptr;
         deserialize(key, ptr);
         data.reset(ptr);
+    }
+}
+
+template <class T>
+void Deserializer::deserialize(std::string_view key, std::shared_ptr<T>& data) {
+    static_assert(detail::canDeserialize<T>(), "Type is not serializable");
+
+    auto keyNode = retrieveChild(key);
+    if (!keyNode) return;
+
+    const std::string typeAttr{
+        detail::getNodeAttribute(keyNode, SerializeConstants::TypeAttribute)};
+
+    if constexpr (util::HasGetClassIdentifier<T>::value) {
+        if (data && !typeAttr.empty() && typeAttr != data->getClassIdentifier()) {
+            // object has wrong type, delete it and let the deserialization create a new object
+            // with the correct type
+            data.reset();
+        }
+    }
+
+    if (!data) {
+        if (typeAttr.empty()) {
+            try {
+                data.reset(getNonRegisteredType<T>());
+            } catch (Exception& e) {
+                NodeDebugger error(keyNode);
+                throw SerializationException(
+                    "Error trying to create " + error.toString(0) + ". Reason:\n" + e.getMessage(),
+                    e.getContext(), key, typeAttr, error[0].identifier, keyNode);
+            }
+            if (!data) {
+                NodeDebugger error(keyNode);
+                throw SerializationException("Could not create " + error.toString(0) +
+                                                 ". Reason: No default constructor found.",
+                                             IVW_CONTEXT, key, typeAttr, error[0].identifier,
+                                             keyNode);
+            }
+        } else {
+            try {
+                for (auto base : registeredFactories_) {
+                    if (base->hasKey(typeAttr)) {
+                        if (auto factory = dynamic_cast<SharedFactory<T>*>(base)) {
+                            if ((data = factory->create(typeAttr))) {
+                                break;
+                            }
+                        }
+                    }
+                }
+            } catch (Exception& e) {
+                NodeDebugger error(keyNode);
+                throw SerializationException(
+                    "Error trying to create " + error.toString(0) + ". Reason:\n" + e.getMessage(),
+                    e.getContext(), key, typeAttr, error[0].identifier, keyNode);
+            }
+            if (!data) {
+                NodeDebugger error(keyNode);
+                throw SerializationException(
+                    "Could not create " + error.toString(0) + ". Reason: \"" + typeAttr +
+                        "\" Not found in factory.",
+                    IVW_CONTEXT, key, typeAttr, error[0].identifier, keyNode);
+            }
+        }
+    }
+
+    if (data) {
+        deserialize(key, *data);
     }
 }
 

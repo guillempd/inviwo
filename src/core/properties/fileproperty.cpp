@@ -39,10 +39,11 @@ namespace inviwo {
 const std::string FileProperty::classIdentifier = "org.inviwo.FileProperty";
 std::string FileProperty::getClassIdentifier() const { return classIdentifier; }
 
-FileProperty::FileProperty(std::string identifier, std::string displayName, std::string value,
-                           std::string contentType, InvalidationLevel invalidationLevel,
-                           PropertySemantics semantics)
-    : TemplateProperty<std::string>(identifier, displayName, value, invalidationLevel, semantics)
+FileProperty::FileProperty(std::string_view identifier, std::string_view displayName,
+                           std::string_view value, std::string_view contentType,
+                           InvalidationLevel invalidationLevel, PropertySemantics semantics)
+    : TemplateProperty<std::string>(identifier, displayName, std::string{value}, invalidationLevel,
+                                    semantics)
     , acceptMode_(AcceptMode::Open)
     , fileMode_(FileMode::AnyFile)
     , contentType_(contentType) {

@@ -62,7 +62,7 @@ void TFPropertyObservable::notifyHistogramModeChange(HistogramMode mode) {
 }
 
 TransferFunctionProperty::TransferFunctionProperty(
-    const std::string& identifier, const std::string& displayName, const TransferFunction& value,
+    std::string_view identifier, std::string_view displayName, const TransferFunction& value,
     VolumeInport* volumeInport, InvalidationLevel invalidationLevel, PropertySemantics semantics)
     : Property(identifier, displayName, invalidationLevel, semantics)
     , tf_{"TransferFunction", value}
@@ -74,8 +74,8 @@ TransferFunctionProperty::TransferFunctionProperty(
     tf_.value.addObserver(this);
 }
 
-TransferFunctionProperty::TransferFunctionProperty(const std::string& identifier,
-                                                   const std::string& displayName,
+TransferFunctionProperty::TransferFunctionProperty(std::string_view identifier,
+                                                   std::string_view displayName,
                                                    VolumeInport* volumeInport,
                                                    InvalidationLevel invalidationLevel,
                                                    PropertySemantics semantics)

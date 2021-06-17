@@ -27,8 +27,7 @@
  *
  *********************************************************************************/
 
-#ifndef IVW_PROCESSORGRAPHICSITEM_H
-#define IVW_PROCESSORGRAPHICSITEM_H
+#pragma once
 
 #include <inviwo/core/processors/processorobserver.h>
 #include <inviwo/core/util/clock.h>
@@ -146,6 +145,7 @@ private:
     std::vector<std::unique_ptr<QWidget>> ownedWidgets_;
 
     bool highlight_;
+    QColor backgroundColor_;
 
     std::shared_ptr<std::function<void(std::string_view, std::string_view)>> idChange_;
     std::shared_ptr<std::function<void(std::string_view, std::string_view)>> nameChange_;
@@ -161,5 +161,3 @@ private:
 };
 
 }  // namespace inviwo
-
-#endif  // IVW_PROCESSORGRAPHICSITEM_H

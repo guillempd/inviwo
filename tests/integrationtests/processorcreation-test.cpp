@@ -97,16 +97,17 @@ TEST_P(ProcessorCreationTests, ProcesorCreateAndResetAndAddToNetwork) {
     LGL_ERROR;
 
     const size_t sizeBefore = network_->getProcessors().size();
-    auto p = s.release();
-    network_->addProcessor(p);
+    network_->addProcessor(s);
     EXPECT_EQ(sizeBefore + 1, network_->getProcessors().size())
         << "Could not add processor " << GetParam();
 
     LGL_ERROR;
 
-    network_->removeAndDeleteProcessor(p);
+    network_->removeProcessor(s.get());
     EXPECT_EQ(sizeBefore, network_->getProcessors().size())
         << "Could not remove processor " << GetParam();
+
+    s.reset(); // make sure the processor is deleted.
 
     LGL_ERROR;
 }

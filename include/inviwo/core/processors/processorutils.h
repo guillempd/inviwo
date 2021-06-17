@@ -30,19 +30,21 @@
 #pragma once
 
 #include <inviwo/core/common/inviwocoredefine.h>
-#include <inviwo/core/common/inviwoapplication.h>
+#include <inviwo/core/common/inviwoapplicationutil.h>
 #include <inviwo/core/processors/processortraits.h>
 #include <inviwo/core/util/glmvec.h>
 #include <inviwo/core/util/utilities.h>
 
 #include <type_traits>
 #include <string_view>
+#include <optional>
 
 namespace inviwo {
 
 class Processor;
 class ProcessorMetaData;
 class InviwoModule;
+class InviwoApplication;
 
 namespace util {
 
@@ -103,7 +105,7 @@ std::unique_ptr<T> makeProcessor(ivec2 pos, Args&&... args) {
     if constexpr (std::is_constructible_v<T, Args...>) {
         p = std::make_unique<T>(std::forward<Args>(args)...);
     } else {
-        p = std::make_unique<T>(std::forward<Args>(args)..., InviwoApplication::getPtr());
+        p = std::make_unique<T>(std::forward<Args>(args)..., util::getInviwoApplication());
     }
 
     if (p->getIdentifier().empty()) p->setIdentifier(util::stripIdentifier(name));
@@ -131,6 +133,15 @@ IVW_CORE_API InviwoModule* getProcessorModule(const Processor* processor,
  */
 IVW_CORE_API InviwoModule* getProcessorModule(std::string_view classIdentifier,
                                               const InviwoApplication& app);
+
+/**
+ * @brief Find the module identifier of a registered processor
+ * @param classIdentifier the class identifier of the processor to look for
+ * @param app the InviwoApplication needed to get the modules
+ * @return the identifer of the module that registered the processor or nullopt if not found
+ */
+IVW_CORE_API std::optional<std::string> getProcessorModuleIdentifier(
+    std::string_view classIdentifier, const InviwoApplication& app);
 
 }  // namespace util
 

@@ -42,20 +42,16 @@ class Property;
 namespace animation {
 
 class IVW_MODULE_ANIMATION_API TrackFactory
-    : public Factory<Track>,
-      public StandardFactory<Track, TrackFactoryObject, const std::string&, ProcessorNetwork*> {
+    : public UniqueFactory<Track>,
+      public UniqueStringKeyFactory<Track, TrackFactoryObject, ProcessorNetwork*> {
 
-    using Parent =
-        StandardFactory<Track, TrackFactoryObject, const std::string&, ProcessorNetwork*>;
+    using Parent = UniqueStringKeyFactory<Track, TrackFactoryObject, ProcessorNetwork*>;
 
 public:
     TrackFactory(ProcessorNetwork* network);
-    virtual ~TrackFactory() = default;
-
+    
     using Parent::create;
-
-    virtual bool hasKey(const std::string& key) const override;
-    virtual std::unique_ptr<Track> create(const std::string& key) const override;
+    virtual std::unique_ptr<Track> create(std::string_view key) const;
     virtual std::unique_ptr<Track> create(Property* property) const;
 
     /**

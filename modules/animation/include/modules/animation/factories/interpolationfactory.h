@@ -29,7 +29,6 @@
 #pragma once
 
 #include <modules/animation/animationmoduledefine.h>
-#include <inviwo/core/common/inviwo.h>
 
 #include <inviwo/core/util/factory.h>
 #include <modules/animation/interpolation/interpolation.h>
@@ -39,12 +38,9 @@ namespace inviwo {
 namespace animation {
 
 class IVW_MODULE_ANIMATION_API InterpolationFactory
-    : public StandardFactory<Interpolation, InterpolationFactoryObject> {
+    : public UniqueStringKeyFactory<Interpolation, InterpolationFactoryObject> {
 public:
-    InterpolationFactory() = default;
-    virtual ~InterpolationFactory() = default;
-
-    using StandardFactory<Interpolation, InterpolationFactoryObject>::create;
+    using UniqueStringKeyFactory<Interpolation, InterpolationFactoryObject>::create;
 
     template <typename Keyframe>
     std::vector<InterpolationFactoryObject*> getSupportedInterpolations() const {

@@ -34,34 +34,20 @@
 #include <inviwo/core/processors/processorwidgetfactoryobject.h>
 #include <inviwo/core/util/factory.h>
 
-#include <unordered_map>
+#include <map>
 #include <string>
 
 namespace inviwo {
 
 class IVW_CORE_API ProcessorWidgetFactory
-    : public Factory<ProcessorWidget, const std::string&, Processor*> {
+    : public UniqueStringKeyFactory<ProcessorWidget, ProcessorWidgetFactoryObject, Processor*>,
+      public UniqueFactory<ProcessorWidget, Processor*> {
 public:
-    using T = ProcessorWidget;
-    using K = const std::string&;
-    using M = ProcessorWidgetFactoryObject;
-    using Key = std::string;
-    using Map = std::unordered_map<Key, ProcessorWidgetFactoryObject*>;
-
-    ProcessorWidgetFactory() = default;
-    virtual ~ProcessorWidgetFactory() = default;
-
-    virtual bool registerObject(M* obj);
-    virtual bool unRegisterObject(M* obj);
-
-    std::unique_ptr<T> create(K key, Processor* processor) const override;
-    std::unique_ptr<T> create(Processor* processor) const;
-
-    virtual bool hasKey(K key) const override;
-    virtual std::vector<Key> getKeys() const;
-
-protected:
-    Map map_;
+    using UniqueStringKeyFactory<ProcessorWidget, ProcessorWidgetFactoryObject, Processor*>::create;
+    using UniqueStringKeyFactory<ProcessorWidget, ProcessorWidgetFactoryObject, Processor*>::hasKey;
+    
+    std::unique_ptr<ProcessorWidget> create(Processor* processor) const override;
+    virtual bool hasKey(Processor* p) const override { return hasKey(p->getClassIdentifier()); }
 };
 
 }  // namespace inviwo

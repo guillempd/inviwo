@@ -40,7 +40,7 @@
 
 namespace inviwo {
 
-class IVW_CORE_API PropertyWidgetFactory : public Factory<PropertyWidget, Property*> {
+class IVW_CORE_API PropertyWidgetFactory : public UniqueFactory<PropertyWidget, Property*> {
 public:
     PropertyWidgetFactory();
     virtual ~PropertyWidgetFactory();

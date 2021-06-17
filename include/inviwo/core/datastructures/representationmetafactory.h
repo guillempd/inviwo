@@ -32,6 +32,8 @@
 #include <inviwo/core/common/inviwocoredefine.h>
 #include <inviwo/core/datastructures/representationfactory.h>
 
+#include <unordered_map>
+
 namespace inviwo {
 
 /**

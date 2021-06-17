@@ -39,8 +39,8 @@ enum class PropertySerializationMode { Default = 0, All, None };
 
 template <typename T>
 struct ValueWrapper {
-    ValueWrapper(std::string valname, T val)
-        : value(val), defaultValue(val), name(std::move(valname)) {}
+    ValueWrapper(std::string_view valname, T val)
+        : value(val), defaultValue(std::move(val)), name(valname) {}
     ValueWrapper(const ValueWrapper<T>& rhs) = default;
     ValueWrapper<T>& operator=(const ValueWrapper<T>& that) = default;
 

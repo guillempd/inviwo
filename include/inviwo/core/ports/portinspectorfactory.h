@@ -37,7 +37,7 @@
 namespace inviwo {
 
 class IVW_CORE_API PortInspectorFactory
-    : public StandardFactory<PortInspector, PortInspectorFactoryObject> {
+    : public UniqueStringKeyFactory<PortInspector, PortInspectorFactoryObject> {
 public:
     PortInspectorFactory() = default;
     virtual ~PortInspectorFactory() = default;

@@ -31,7 +31,7 @@
 
 namespace inviwo {
 
-BrushingAndLinkingInport::BrushingAndLinkingInport(std::string identifier)
+BrushingAndLinkingInport::BrushingAndLinkingInport(std::string_view identifier)
     : DataInport<BrushingAndLinkingManager>(identifier) {
     setOptional(true);
 
@@ -110,7 +110,7 @@ std::string BrushingAndLinkingInport::getClassIdentifier() const {
     return PortTraits<BrushingAndLinkingInport>::classIdentifier();
 }
 
-BrushingAndLinkingOutport::BrushingAndLinkingOutport(std::string identifier)
+BrushingAndLinkingOutport::BrushingAndLinkingOutport(std::string_view identifier)
     : DataOutport<BrushingAndLinkingManager>(identifier) {}
 
 std::string BrushingAndLinkingOutport::getClassIdentifier() const {

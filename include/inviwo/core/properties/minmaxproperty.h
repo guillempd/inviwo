@@ -50,7 +50,7 @@ public:
     virtual std::string getClassIdentifier() const override;
     static const std::string classIdentifier;
 
-    MinMaxProperty(std::string identifier, std::string displayName,
+    MinMaxProperty(std::string_view identifier, std::string_view displayName,
                    T valueMin = Defaultvalues<T>::getMin(), T valueMax = Defaultvalues<T>::getMax(),
                    T rangeMin = Defaultvalues<T>::getMin(), T rangeMax = Defaultvalues<T>::getMax(),
                    T increment = Defaultvalues<T>::getInc(), T minSeperation = 0,
@@ -154,7 +154,7 @@ struct PropertyTraits<MinMaxProperty<T>> {
 };
 
 template <typename T>
-MinMaxProperty<T>::MinMaxProperty(std::string identifier, std::string displayName, T valueMin,
+MinMaxProperty<T>::MinMaxProperty(std::string_view identifier, std::string_view displayName, T valueMin,
                                   T valueMax, T rangeMin, T rangeMax, T increment, T minSeparation,
                                   InvalidationLevel invalidationLevel, PropertySemantics semantics)
     : Property(identifier, displayName, invalidationLevel, semantics)

@@ -36,26 +36,23 @@
 #include <modules/animationqt/widgets/trackwidgetqt.h>
 #include <modules/animationqt/factories/trackwidgetqtfactoryobject.h>
 
+#include <map>
+
 namespace inviwo {
 
 namespace animation {
 
 class IVW_MODULE_ANIMATIONQT_API TrackWidgetQtFactory
-    : public StandardFactory<TrackWidgetQt, TrackWidgetQtFactoryObject, const std::string&,
-                             Track&> {
+    : public UniqueStringKeyFactory<TrackWidgetQt, TrackWidgetQtFactoryObject, Track&> {
 public:
-    TrackWidgetQtFactory() = default;
-    virtual ~TrackWidgetQtFactory() = default;
+    using UniqueStringKeyFactory<TrackWidgetQt, TrackWidgetQtFactoryObject, Track&>::create;
 
-    using StandardFactory<TrackWidgetQt, TrackWidgetQtFactoryObject, const std::string&,
-                          Track&>::create;
+    void registerTrackToWidgetMap(std::string_view trackId, std::string_view widgetId);
 
-    void registerTrackToWidgetMap(const std::string& trackId, const std::string& widgetId);
-
-    std::string getWidgetId(const std::string& trackId) const;
+    std::string getWidgetId(std::string_view trackId) const;
 
 private:
-    std::unordered_map<std::string, std::string> trackToWidget_;
+    std::map<std::string, std::string, std::less<>> trackToWidget_;
 };
 
 }  // namespace animation

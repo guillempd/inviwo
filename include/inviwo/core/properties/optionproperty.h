@@ -46,7 +46,7 @@ namespace inviwo {
  */
 class IVW_CORE_API BaseOptionProperty : public Property {
 public:
-    BaseOptionProperty(const std::string& identifier, const std::string& displayName,
+    BaseOptionProperty(std::string_view identifier, std::string_view displayName,
                        InvalidationLevel invalidationLevel = InvalidationLevel::InvalidOutput,
                        PropertySemantics semantics = PropertySemantics::Default);
 
@@ -114,11 +114,11 @@ class TemplateOptionProperty : public BaseOptionProperty {
 public:
     using value_type = T;
 
-    TemplateOptionProperty(const std::string& identifier, const std::string& displayName,
+    TemplateOptionProperty(std::string_view identifier, std::string_view displayName,
                            InvalidationLevel invalidationLevel = InvalidationLevel::InvalidOutput,
                            PropertySemantics semantics = PropertySemantics::Default);
 
-    TemplateOptionProperty(const std::string& identifier, const std::string& displayName,
+    TemplateOptionProperty(std::string_view identifier, std::string_view displayName,
                            const std::vector<OptionPropertyOption<T>>& options,
                            size_t selectedIndex = 0,
                            InvalidationLevel invalidationLevel = InvalidationLevel::InvalidOutput,
@@ -126,7 +126,7 @@ public:
 
     template <typename U = T,
               class = typename std::enable_if<util::is_stream_insertable<U>::value, void>::type>
-    TemplateOptionProperty(const std::string& identifier, const std::string& displayName,
+    TemplateOptionProperty(std::string_view identifier, std::string_view displayName,
                            const std::vector<T>& options, size_t selectedIndex = 0,
                            InvalidationLevel invalidationLevel = InvalidationLevel::InvalidOutput,
                            PropertySemantics semantics = PropertySemantics::Default);
@@ -142,7 +142,7 @@ public:
      * Implicit conversion operator. The OptionProperty will implicitly be converted to T when
      * possible.
      */
-    operator const T&() const;
+    operator const T &() const;
 
     template <typename U = T,
               class = typename std::enable_if<std::is_same_v<U, std::string>, void>::type>
@@ -379,8 +379,8 @@ bool OptionPropertyOption<T>::operator!=(const OptionPropertyOption<T>& rhs) con
 }
 
 template <typename T>
-TemplateOptionProperty<T>::TemplateOptionProperty(const std::string& identifier,
-                                                  const std::string& displayName,
+TemplateOptionProperty<T>::TemplateOptionProperty(std::string_view identifier,
+                                                  std::string_view displayName,
                                                   InvalidationLevel invalidationLevel,
                                                   PropertySemantics semantics)
     : BaseOptionProperty(identifier, displayName, invalidationLevel, semantics)
@@ -389,7 +389,7 @@ TemplateOptionProperty<T>::TemplateOptionProperty(const std::string& identifier,
 
 template <typename T>
 TemplateOptionProperty<T>::TemplateOptionProperty(
-    const std::string& identifier, const std::string& displayName,
+    std::string_view identifier, std::string_view displayName,
     const std::vector<OptionPropertyOption<T>>& options, size_t selectedIndex,
     InvalidationLevel invalidationLevel, PropertySemantics semantics)
     : BaseOptionProperty(identifier, displayName, invalidationLevel, semantics)
@@ -401,7 +401,7 @@ TemplateOptionProperty<T>::TemplateOptionProperty(
 template <typename T>
 template <typename U, class>
 TemplateOptionProperty<T>::TemplateOptionProperty(
-    const std::string& identifier, const std::string& displayName, const std::vector<T>& options,
+    std::string_view identifier, std::string_view displayName, const std::vector<T>& options,
     size_t selectedIndex, InvalidationLevel invalidationLevel, PropertySemantics semantics)
     : BaseOptionProperty(identifier, displayName, invalidationLevel, semantics)
     , selectedIndex_(std::min(selectedIndex, options.size() - 1))
@@ -528,7 +528,7 @@ const T& TemplateOptionProperty<T>::getSelectedValue() const {
 }
 
 template <typename T>
-TemplateOptionProperty<T>::operator const T&() const {
+TemplateOptionProperty<T>::operator const T &() const {
     IVW_ASSERT(selectedIndex_ < options_.size(),
                "Index out of range (number of options: " << options_.size()
                                                          << ", index: " << selectedIndex_ << ")");

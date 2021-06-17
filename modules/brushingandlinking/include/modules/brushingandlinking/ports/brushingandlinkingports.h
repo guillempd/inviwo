@@ -44,7 +44,7 @@ namespace inviwo {
 class IVW_MODULE_BRUSHINGANDLINKING_API BrushingAndLinkingInport
     : public DataInport<BrushingAndLinkingManager> {
 public:
-    BrushingAndLinkingInport(std::string identifier);
+    BrushingAndLinkingInport(std::string_view identifier);
     virtual ~BrushingAndLinkingInport() = default;
 
     void sendFilterEvent(const std::unordered_set<size_t>& indices);
@@ -72,7 +72,7 @@ public:
 class IVW_MODULE_BRUSHINGANDLINKING_API BrushingAndLinkingOutport
     : public DataOutport<BrushingAndLinkingManager> {
 public:
-    BrushingAndLinkingOutport(std::string identifier);
+    BrushingAndLinkingOutport(std::string_view identifier);
     virtual ~BrushingAndLinkingOutport() = default;
 
     virtual std::string getClassIdentifier() const override;

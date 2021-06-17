@@ -35,9 +35,7 @@ namespace animation {
 
 TrackFactory::TrackFactory(ProcessorNetwork* network) : network_{network} {}
 
-bool TrackFactory::hasKey(const std::string& key) const { return Parent::hasKey(key); }
-
-std::unique_ptr<Track> TrackFactory::create(const std::string& key) const {
+std::unique_ptr<Track> TrackFactory::create(std::string_view key) const {
     return Parent::create(key, network_);
 }
 

@@ -48,7 +48,7 @@ public:
     CompositeProcessorFactoryObject(const std::string& filen);
     virtual ~CompositeProcessorFactoryObject() = default;
 
-    virtual std::unique_ptr<Processor> create(InviwoApplication* app) override;
+    virtual std::shared_ptr<Processor> create(InviwoApplication* app) override;
 
 private:
     static ProcessorInfo makeProcessorInfo(const std::string& file);

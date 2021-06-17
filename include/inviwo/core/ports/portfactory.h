@@ -35,28 +35,27 @@
 
 namespace inviwo {
 
-class IVW_CORE_API InportFactory : public Factory<Inport, const std::string&, const std::string&>,
-                                   public StandardFactory<Inport, InportFactoryObject> {
+class IVW_CORE_API InportFactory : public UniqueFactory<Inport, std::string_view, std::string_view>,
+                                   public UniqueStringKeyFactory<Inport, InportFactoryObject> {
 public:
     InportFactory() = default;
     virtual ~InportFactory() = default;
 
-    using StandardFactory<Inport, InportFactoryObject>::create;
-    virtual bool hasKey(const std::string& key) const override;
-    virtual std::unique_ptr<Inport> create(const std::string& className,
-                                           const std::string& identifier) const override;
+    using UniqueStringKeyFactory<Inport, InportFactoryObject>::create;
+    virtual std::unique_ptr<Inport> create(std::string_view className,
+                                           std::string_view identifier) const override;
 };
 
-class IVW_CORE_API OutportFactory : public Factory<Outport, const std::string&, const std::string&>,
-                                    public StandardFactory<Outport, OutportFactoryObject> {
+class IVW_CORE_API OutportFactory
+    : public UniqueFactory<Outport, std::string_view, std::string_view>,
+      public UniqueStringKeyFactory<Outport, OutportFactoryObject> {
 public:
     OutportFactory() = default;
     virtual ~OutportFactory() = default;
 
-    using StandardFactory<Outport, OutportFactoryObject>::create;
-    virtual bool hasKey(const std::string& key) const override;
-    virtual std::unique_ptr<Outport> create(const std::string& className,
-                                            const std::string& identifier) const override;
+    using UniqueStringKeyFactory<Outport, OutportFactoryObject>::create;
+    virtual std::unique_ptr<Outport> create(std::string_view className,
+                                            std::string_view identifier) const override;
 };
 
 }  // namespace inviwo

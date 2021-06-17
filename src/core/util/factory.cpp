@@ -2,7 +2,7 @@
  *
  * Inviwo - Interactive Visualization Workshop
  *
- * Copyright (c) 2014-2021 Inviwo Foundation
+ * Copyright (c) 2021 Inviwo Foundation
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -27,15 +27,10 @@
  *
  *********************************************************************************/
 
-#include <inviwo/core/properties/propertywidgetfactoryobject.h>
+#include <inviwo/core/util/factory.h>
 
 namespace inviwo {
-PropertyWidgetFactoryObject::PropertyWidgetFactoryObject(std::string_view className,
-                                                         const PropertySemantics& semantics)
-    : className_(className), semantics_(semantics) {}
 
-const std::string& PropertyWidgetFactoryObject::getClassIdentifier() const { return className_; }
-
-const PropertySemantics& PropertyWidgetFactoryObject::getSematics() const { return semantics_; }
+template class IVW_CORE_TMPL_INST FactoryBase<std::string_view>;
 
 }  // namespace inviwo

@@ -37,7 +37,7 @@
 
 namespace inviwo {
 
-class IVW_CORE_API MeshDrawerFactory : public Factory<MeshDrawer, const Mesh*> {
+class IVW_CORE_API MeshDrawerFactory : public UniqueFactory<MeshDrawer, const Mesh*> {
 public:
     MeshDrawerFactory() = default;
     virtual ~MeshDrawerFactory() = default;

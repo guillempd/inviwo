@@ -104,7 +104,7 @@ public:
     virtual void clear() = 0;
 
 protected:
-    Outport(std::string identifier = "");
+    Outport(std::string_view identifier);
 
     // These function are only called by the corresponding inport.
     virtual void connectTo(Inport* port);

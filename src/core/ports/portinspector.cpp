@@ -42,8 +42,8 @@ namespace inviwo {
 
 PortInspector::PortInspector() = default;
 
-PortInspector::PortInspector(std::string portClassIdentifier,
-                             std::string inspectorWorkspaceFileName)
+PortInspector::PortInspector(std::string_view portClassIdentifier,
+                             std::string_view inspectorWorkspaceFileName)
     : inspectorNetworkFileName_(inspectorWorkspaceFileName)
     , portClassIdentifier_(portClassIdentifier) {
 
@@ -57,7 +57,7 @@ PortInspector::PortInspector(std::string portClassIdentifier,
 
         ProcessorNetwork network(app);
         deserializer.deserialize("ProcessorNetwork", network);
-        processors_ = network.getProcessors();
+        network.forEachProcessor([&](auto* p) { processors_.emplace_back(p->shared_from_this()); });
 
         for (auto processor : processors_) {
             // Set Identifiers
@@ -76,7 +76,7 @@ PortInspector::PortInspector(std::string portClassIdentifier,
             meta->setSelected(false);
 
             // Find and save the canvasProcessor
-            if (auto canvasProcessor = dynamic_cast<CanvasProcessor*>(processor)) {
+            if (auto canvasProcessor = dynamic_cast<CanvasProcessor*>(processor.get())) {
                 canvasProcessor_ = canvasProcessor;
                 // Mark the widget as a "PortInspector"
                 auto md = canvasProcessor->createMetaData<BoolMetaData>("PortInspector");
@@ -88,11 +88,6 @@ PortInspector::PortInspector(std::string portClassIdentifier,
         connections_ = network.getConnections();
         // Store the processor links.
         propertyLinks_ = network.getLinks();
-
-        // Manually clear the network so out processors won't get deleted.
-        for (auto processor : processors_) {
-            network.removeProcessor(processor);
-        }
 
         if (!canvasProcessor_) {
             throw Exception(
@@ -106,12 +101,7 @@ PortInspector::PortInspector(std::string portClassIdentifier,
     }
 }
 
-PortInspector::~PortInspector() {
-    RenderContext::getPtr()->activateDefaultRenderContext();
-    for (auto processor : processors_) {
-        delete processor;
-    }
-}
+PortInspector::~PortInspector() { RenderContext::getPtr()->activateDefaultRenderContext(); }
 
 const std::string& PortInspector::getInspectorNetworkFileName() const {
     return inspectorNetworkFileName_;
@@ -121,6 +111,8 @@ const std::vector<Inport*>& PortInspector::getInports() const { return inports_;
 CanvasProcessor* PortInspector::getCanvasProcessor() const { return canvasProcessor_; }
 const std::vector<PortConnection>& PortInspector::getConnections() const { return connections_; }
 const std::vector<PropertyLink>& PortInspector::getPropertyLinks() const { return propertyLinks_; }
-const std::vector<Processor*>& PortInspector::getProcessors() const { return processors_; }
+const std::vector<std::shared_ptr<Processor>>& PortInspector::getProcessors() const {
+    return processors_;
+}
 
 }  // namespace inviwo
