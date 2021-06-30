@@ -170,8 +170,6 @@ protected:
     Data(const Data<Self, Repr>& rhs);
     Data<Self, Repr>& operator=(const Data<Self, Repr>& rhs);
 
-    template <typename T>
-    const T* getValidRepresentation() const;
     void copyRepresentationsTo(Data<Self, Repr>* targetData) const;
 
     std::shared_ptr<Repr> addRepresentationInternal(std::shared_ptr<Repr> representation) const;
@@ -209,37 +207,40 @@ const T* Data<Self, Repr>::getRepresentation() const {
         lastValidRepresentation_ = addRepresentationInternal(repr);
     }
 
-    auto it = representations_.find(std::type_index(typeid(T)));
-    if (it != representations_.end() && it->second->isValid()) {
+    if (auto it = representations_.find(std::type_index(typeid(T)));
+        it != representations_.end() && it->second->isValid()) {
         lastValidRepresentation_ = it->second;
         return dynamic_cast<const T*>(lastValidRepresentation_.get());
     } else {
-        return getValidRepresentation<T>();
-    }
-}
-
-template <typename Self, typename Repr>
-template <typename T>
-const T* Data<Self, Repr>::getValidRepresentation() const {
-    auto factory = RepresentationFactoryManager::getRepresentationConverterFactory<Repr>();
-    if (auto package = factory->getRepresentationConverter(lastValidRepresentation_->getTypeIndex(),
-                                                           std::type_index(typeid(T)))) {
-        for (auto converter : package->getConverters()) {
-            auto dest = converter->getConverterID().second;
-            auto it = representations_.find(dest);
-            if (it != representations_.end()) {  // Next repr. already exist, just update it
-                converter->update(lastValidRepresentation_, it->second);
-                lastValidRepresentation_ = it->second;
-                lastValidRepresentation_->setValid(true);
-            } else {  // No representation found, create it
-                auto result = converter->createFrom(lastValidRepresentation_);
-                if (!result) throw ConverterException("Converter failed to create", IVW_CONTEXT);
-                lastValidRepresentation_ = addRepresentationInternal(result);
+        auto factory = RepresentationFactoryManager::getRepresentationConverterFactory<Repr>();
+        if (auto package = factory->getRepresentationConverter(
+                lastValidRepresentation_->getTypeIndex(), std::type_index(typeid(T)))) {
+            for (auto converter : package->getConverters()) {
+                auto dest = converter->getConverterID().second;
+                auto srcRepr = lastValidRepresentation_;
+                auto dstIt = representations_.find(dest);
+                if (dstIt != representations_.end()) {  // Next repr. already exist, just update it
+                    auto destRepr = dstIt->second;
+                    {
+                        lock.unlock();
+                        converter->update(srcRepr, destRepr);
+                        lock.lock();
+                    }
+                    lastValidRepresentation_ = destRepr;
+                    lastValidRepresentation_->setValid(true);
+                } else {  // No representation found, create it
+                    lock.unlock();
+                    auto result = converter->createFrom(srcRepr);
+                    if (!result)
+                        throw ConverterException("Converter failed to create", IVW_CONTEXT);
+                    lock.lock();
+                    lastValidRepresentation_ = addRepresentationInternal(result);
+                }
             }
+            return dynamic_cast<const T*>(lastValidRepresentation_.get());
+        } else {
+            throw ConverterException("Found no converters", IVW_CONTEXT);
         }
-        return dynamic_cast<const T*>(lastValidRepresentation_.get());
-    } else {
-        throw ConverterException("Found no converters", IVW_CONTEXT);
     }
 }
 
