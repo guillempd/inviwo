@@ -33,7 +33,7 @@
 
 namespace inviwo {
 
-class ProcessorTrampoline : public Processor {
+class IVW_MODULE_PYTHON3_API ProcessorTrampoline : public Processor {
 public:
     /* Inherit the constructors */
     using Processor::Processor;

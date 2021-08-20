@@ -109,7 +109,8 @@ std::shared_ptr<VolumePy> VolumeRAM2PyConverter::createFrom(
         if (pybind11::array::c_style == (data.flags() & pybind11::array::c_style)) {
             std::memcpy(data.mutable_data(0), vr->getData(), data.nbytes());
         } else {
-            throw Exception("Unable to convert from VolumePy to VolumeRAM", IVW_CONTEXT);
+            throw Exception("Unable to convert from VolumePy to VolumeRAM",
+                            IVW_CONTEXT_CUSTOM("VolumeRAM2PyConverter"));
         }
 
         return data;
