@@ -89,6 +89,7 @@
 #include <modules/basegl/processors/volumeraycaster.h>
 #include <modules/basegl/processors/volumeslicegl.h>
 #include <modules/basegl/processors/volumeprocessing/volumeshader.h>
+#include <modules/basegl/processors/volumeraycasterwithshadows.h>
 #include <modules/basegl/properties/linesettingsproperty.h>
 #include <modules/basegl/properties/splitterproperty.h>
 #include <modules/basegl/properties/stipplingproperty.h>
@@ -175,6 +176,7 @@ BaseGLModule::BaseGLModule(InviwoApplication* app) : InviwoModule(app, "BaseGL")
     registerProcessor<VolumeMapping>();
     registerProcessor<VolumeMerger>();
     registerProcessor<VolumeNormalizationProcessor>();
+    registerProcessor<VolumeRaycasterWithShadows>();
     registerProcessor<VolumeRegionShrink>();
     registerProcessor<VolumeShader>();
 

@@ -81,6 +81,7 @@ set(HEADER_FILES
     include/modules/basegl/processors/volumeprocessing/volumeregionshrink.h
     include/modules/basegl/processors/volumeprocessing/volumeshader.h
     include/modules/basegl/processors/volumeraycaster.h
+    include/modules/basegl/processors/volumeraycasterwithshadows.h
     include/modules/basegl/processors/volumeslicegl.h
     include/modules/basegl/properties/linesettingsproperty.h
     include/modules/basegl/properties/splitterproperty.h
@@ -169,6 +170,7 @@ set(SOURCE_FILES
     src/processors/volumeprocessing/volumeregionshrink.cpp
     src/processors/volumeprocessing/volumeshader.cpp
     src/processors/volumeraycaster.cpp
+    src/processors/volumeraycasterwithshadows.cpp
     src/processors/volumeslicegl.cpp
     src/properties/linesettingsproperty.cpp
     src/properties/splitterproperty.cpp

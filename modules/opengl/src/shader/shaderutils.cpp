@@ -84,6 +84,25 @@ void addShaderDefines(Shader& shader, const ShadingMode& mode) {
 
     shader.getFragmentShaderObject()->addShaderDefine(shadingKey, shadingValue);
     shader.getFragmentShaderObject()->setShaderDefine("SHADING_ENABLED", mode != ShadingMode::None);
+
+    constexpr std::string_view ambientShadingKey =
+        "APPLY_AMBIENT_LIGHTING(lighting, materialAmbientColor)";
+    const std::string_view ambientShadingValue = [&]() {
+        switch (mode) {
+            case ShadingMode::Ambient:
+            case ShadingMode::BlinnPhong:
+            case ShadingMode::Phong:
+                return "shadeAmbient(lighting, materialAmbientColor)";
+            case ShadingMode::Specular:
+            case ShadingMode::Diffuse:
+            case ShadingMode::None:
+            default:
+                return "vec3(0.0f)";
+        }
+
+    }();
+
+    shader.getFragmentShaderObject()->addShaderDefine(ambientShadingKey, ambientShadingValue);
 }
 
 void setShaderUniforms(Shader& shader, const SimpleLightingProperty& property,
