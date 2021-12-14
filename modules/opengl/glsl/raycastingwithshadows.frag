@@ -73,39 +73,54 @@ uniform bool useNormals = false;
 uniform int channel;
 
 #define ERT_THRESHOLD 0.99  // threshold for early ray termination
+#define TRANSLUCENT_THRESHOLD 0.3 // TODO: Make this a uniform in the future
 
 #if (!defined(INCLUDE_DVR) && !defined(INCLUDE_ISOSURFACES))
 #  define INCLUDE_DVR
 #endif
+
+void computeRayTraversalParameters(in vec3 rayStart, in vec3 rayEnd, in float samplingRate,
+                                   out vec3 rayDirection,
+                                   out float t, out float tIncr, out float tEnd,
+                                   out float samples) {
+    rayDirection = rayEnd - rayStart;
+    float rayLength = length(rayDirection);
+
+    tEnd = rayLength;
+    samples = samplingRate * length(rayDirection * volumeParameters.dimensions);
+    tIncr = min(tEnd, tEnd / samples);
+    samples = ceil(tEnd / tIncr);
+    tIncr = tEnd / samples;
+    t = 0.5 * tIncr;
+
+    rayDirection /= rayLength;
+}
 
 // Assume rayStart is inside volume and rayEnd is outside volume
 vec3 rayVolumeIntersection(vec3 rayStart, vec3 rayEnd) {
     vec3 rayDirection = rayEnd - rayStart;
     vec3 tIntersection0 = (vec3(1.0f, 1.0f, 1.0f) - rayStart) / rayDirection;
     vec3 tIntersection1 = (vec3(0.0f, 0.0f, 0.0f) - rayStart) / rayDirection;
-    float tIntersection = 2.0f; // TODO: Ensure this is OK to use
-    if (tIntersection0.x > 0.0f && tIntersection0.x < tIntersection) tIntersection = tIntersection0.x;
-    if (tIntersection0.y > 0.0f && tIntersection0.y < tIntersection) tIntersection = tIntersection0.y;
-    if (tIntersection0.z > 0.0f && tIntersection0.z < tIntersection) tIntersection = tIntersection0.z;
-    if (tIntersection1.x > 0.0f && tIntersection1.x < tIntersection) tIntersection = tIntersection1.x;
-    if (tIntersection1.y > 0.0f && tIntersection1.y < tIntersection) tIntersection = tIntersection1.y;
-    if (tIntersection1.z > 0.0f && tIntersection1.z < tIntersection) tIntersection = tIntersection1.z;
+    float tIntersection = 2.0f;
+    for (int c = 0; c < 3; ++c) {
+        if (tIntersection0[c] > 0.0 && tIntersection0[c] < tIntersection) tIntersection = tIntersection0[c];
+        if (tIntersection1[c] > 0.0 && tIntersection1[c] < tIntersection) tIntersection = tIntersection1[c];
+    }
     return rayStart + tIntersection * rayDirection;
 }
 
 // TODO: Give this a better name
-// TODO: Determine number of samples
 // TODO: Determine offset
 bool shadowRayTraversal(vec3 rayStart, vec3 rayEnd) {
-    vec3 rayDirection = rayEnd - rayStart;
-    float rayLength = length(rayDirection);
-    float tIncr = min(rayLength, rayLength / 100);
-    float samples = ceil(rayLength / tIncr);
-    tIncr = rayLength / samples;
-    float t = 0.5f * tIncr + 0.01;
-    float tEnd = rayLength;
-    rayDirection = rayDirection / rayLength;
+    vec3 rayDirection;
+    float t;
+    float tIncr;
+    float tEnd;
+    float samples;
+    computeRayTraversalParameters(rayStart, rayEnd, raycaster.samplingRate, rayDirection, t, tIncr, tEnd, samples);
 
+    float offset = 0.01;
+    t += offset;
     while (t < tEnd) {
         vec3 samplePos = rayStart + t * rayDirection;
         vec4 voxel = getNormalizedVoxel(volume, volumeParameters, samplePos);
@@ -116,17 +131,46 @@ bool shadowRayTraversal(vec3 rayStart, vec3 rayEnd) {
     return false;
 }
 
+vec3 applyNoShadows(LightParameters lighting,
+                    vec3 materialAmbientColor, vec3 materialDiffuseColor, vec3 materialSpecularColor,
+                    vec3 position, vec3 normal, vec3 toCameraDir) {
+    return APPLY_LIGHTING(lighting, materialAmbientColor, materialDiffuseColor, materialSpecularColor,
+                          position, normal, toCameraDir);
+}
+
+vec3 applyHardShadows(LightParameters lighting, vec3 samplePosition,
+                      vec3 materialAmbientColor, vec3 materialDiffuseColor, vec3 materialSpecularColor,
+                      vec3 position, vec3 normal, vec3 toCameraDir) {
+    vec3 rayStart = samplePosition;
+    vec3 rayEnd = (volumeParameters.worldToTexture * vec4(lighting.position, 1.0)).xyz;
+    // intersect shadowray with bounding box to compute exitPoint
+    vec3 exitPoint = rayVolumeIntersection(rayStart, rayEnd);
+    bool shadowed = shadowRayTraversal(rayStart, exitPoint);
+
+    if (shadowed) return APPLY_AMBIENT_LIGHTING(lighting, materialAmbientColor);
+    else return APPLY_LIGHTING(lighting, materialAmbientColor, materialDiffuseColor, materialSpecularColor,
+                                    position, normal, toCameraDir);
+}
+
+// TODO: Implement
+vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition,
+                      vec3 materialAmbientColor, vec3 materialDiffuseColor, vec3 materialSpecularColor,
+                      vec3 position, vec3 normal, vec3 toCameraDir) {
+    return applyNoShadows(lighting, materialAmbientColor, materialDiffuseColor, materialSpecularColor,
+                          position, normal, toCameraDir);
+}
+
 
 vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgroundDepth, vec3 entryNormal) {
     vec4 result = vec4(0.0);
-    vec3 rayDirection = exitPoint - entryPoint;
-    float tEnd = length(rayDirection);
-    float tIncr = min(
-        tEnd, tEnd / (raycaster.samplingRate * length(rayDirection * volumeParameters.dimensions)));
-    float samples = ceil(tEnd / tIncr);
-    tIncr = tEnd / samples;
-    float t = 0.5f * tIncr;
-    rayDirection = normalize(rayDirection);
+
+    vec3 rayDirection;
+    float t;
+    float tIncr;
+    float tEnd;
+    float samples;
+    computeRayTraversalParameters(entryPoint, exitPoint, raycaster.samplingRate, rayDirection, t, tIncr, tEnd, samples);
+
     float tDepth = -1.0;
     vec4 color;
     vec4 voxel;
@@ -192,18 +236,14 @@ vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgro
             // the direction towards a lower intensity medium (gradient points in the increasing
             // direction)
             if (color.a > ERT_THRESHOLD)
-            {
-                vec3 rayStart = samplePos;
-                vec3 rayEnd = (volumeParameters.worldToTexture * vec4(lighting.position, 1.0)).xyz;
-                // intersect shadowray with bounding box to compute exitPoint
-                vec3 exitPoint = rayVolumeIntersection(rayStart, rayEnd);
-                bool shadowed = shadowRayTraversal(rayStart, exitPoint);
-                if (shadowed) color.rgb = APPLY_AMBIENT_LIGHTING(lighting, color.rgb); // TODO: This causes some issues depending on the shading type
-                else color.rgb = APPLY_LIGHTING(lighting, color.rgb, color.rgb, vec3(1.0),
-                                       worldSpacePosition, -gradient, toCameraDir);
-            }
-            else color.rgb = APPLY_LIGHTING(lighting, color.rgb, color.rgb, vec3(1.0),
-                                       worldSpacePosition, -gradient, toCameraDir);
+                color.rgb = applyHardShadows(lighting, samplePos, color.rgb, color.rgb, vec3(1.0),
+                                             worldSpacePosition, -gradient, toCameraDir);
+            else if (color.a > TRANSLUCENT_THRESHOLD)
+                color.rgb = applySoftShadows(lighting, samplePos, color.rgb, color.rgb, vec3(1.0),
+                                             worldSpacePosition, -gradient, toCameraDir);
+            else
+                color.rgb = applyNoShadows(lighting, color.rgb, color.rgb, vec3(1.0),
+                                            worldSpacePosition, -gradient, toCameraDir);
 
             result = APPLY_COMPOSITING(result, color, samplePos, voxel, gradient, camera,
                                        raycaster.isoValue, t, tDepth, tIncr);
