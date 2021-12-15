@@ -76,8 +76,8 @@ uniform int channel;
 #define ERT_THRESHOLD 0.99  // threshold for early ray termination
 #define OPAQUE_THRESHOLD 0.99 // Should this be the same as above? => UNIFORM 
 #define TRANSLUCENT_THRESHOLD 0.15 // TODO: Make this a uniform in the future => UNIFORM
-#define SOFT_SHADOWS_SAMPLES 4 // => UNIFORM
-#define R 4 // => UNIFORM
+#define SOFT_SHADOWS_SAMPLES 16 // => UNIFORM
+#define R 1 // => UNIFORM
 #define SOFT_SHADOWS_ENABLED // => DEFINE
 #define PI 3.14159265358979
 
@@ -108,20 +108,6 @@ vec3 hemisphereSample_uniform(float u, float v) {
     float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
     return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 }
-
-// TODO: Optimize by moving the computation of the basis to the outside of this function
-// TODO: Optimize by not using distance function (use dot() instead)
-vec3 uniformSampleLight(vec3 lightPosition, vec3 voxelPosition, vec2 random) {
-    vec3 uniformSample = hemisphereSample_uniform(random.x, random.y);
-    vec3 x = vec3(1.0, 0.0, 0.0); // FIXME
-    vec3 Z = normalize(voxelPosition - lightPosition);
-    if (distance(x, Z) < 0.01) x = vec3(0.0, 1.0, 0.0);
-    vec3 Y = -normalize(cross(x, Z));
-    vec3 X = cross(Y, Z);
-    mat3 basis = mat3(X, Y, Z);
-    return basis * (R * uniformSample) + lightPosition;
-}
-
 
 void computeRayTraversalParameters(in vec3 rayStart, in vec3 rayEnd, in float samplingRate,
                                    out vec3 rayDirection,
@@ -195,8 +181,7 @@ vec3 applyHardShadows(LightParameters lighting, vec3 samplePosition,
                                     position, normal, toCameraDir);
 }
 
-// TODO: Improve this by interleaving the light samples among the shadow rays (compute upper bound of shadow rays as SOFT_SHADOW_SAMPLES * samples)
-vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition,
+vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition, uint sampleId, uint totalSamples,
                       vec3 materialAmbientColor, vec3 materialDiffuseColor, vec3 materialSpecularColor,
                       vec3 position, vec3 normal, vec3 toCameraDir) {
     float shadowed = 0.0;
@@ -204,10 +189,18 @@ vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition,
 #if defined(SOFT_SHADOWS_ENABLED)
     vec3 rayStart = samplePosition;
 
+    vec3 x = vec3(1.0, 0.0, 0.0);
+    vec3 Z = normalize(samplePosition - lighting.position);
+    if (distance(x, Z) < 0.01) x = vec3(0.0, 1.0, 0.0);
+    vec3 Y = -normalize(cross(x, Z));
+    vec3 X = cross(Y, Z);
+    mat3 basis = mat3(X, Y, Z);
+
     int shadowedCount = 0;
     for (int i = 0; i < SOFT_SHADOWS_SAMPLES; ++i) {
-        vec2 random = hammersley2d(i, SOFT_SHADOWS_SAMPLES);
-        vec3 lightSample = uniformSampleLight(lighting.position, samplePosition, random);
+        vec2 random = hammersley2d(i * totalSamples + sampleId, SOFT_SHADOWS_SAMPLES * totalSamples);
+        vec3 uniformHemisphere = hemisphereSample_uniform(random.x, random.y);
+        vec3 lightSample = basis * (R * uniformHemisphere) + lighting.position;
         vec3 rayEnd = (volumeParameters.worldToTexture * vec4(lightSample, 1.0)).xyz;
         vec3 exitPoint = rayVolumeIntersection(rayStart, rayEnd);
         if (shadowRayTraversal(rayStart, exitPoint)) ++shadowedCount;
@@ -222,6 +215,8 @@ vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition,
     vec3 diff = lit - ambient;
     return ambient + (1.0 - shadowed) * diff;
 }
+
+// TODO: Define applySoftShadowsInterleaved for being able to compare vs non-interleaved
 
 
 vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgroundDepth, vec3 entryNormal) {
@@ -260,6 +255,7 @@ vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgro
 
 
     bool first = true;
+    int i = 1;
     while (t < tEnd) {
         samplePos = entryPoint + t * rayDirection;
         vec4 previousVoxel = voxel;
@@ -302,7 +298,7 @@ vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgro
                 color.rgb = applyHardShadows(lighting, samplePos, color.rgb, color.rgb, vec3(1.0),
                                              worldSpacePosition, -gradient, toCameraDir);
             else if (color.a > TRANSLUCENT_THRESHOLD)
-                color.rgb = applySoftShadows(lighting, samplePos, color.rgb, color.rgb, vec3(1.0),
+                color.rgb = applySoftShadows(lighting, samplePos, i, int(samples), color.rgb, color.rgb, vec3(1.0),
                                              worldSpacePosition, -gradient, toCameraDir);
             else
                 color.rgb = applyNoShadows(lighting, color.rgb, color.rgb, vec3(1.0),
@@ -324,6 +320,7 @@ vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgro
             t += tIncr;
         }
         first = false;
+        ++i;
     }
 
     // composite background if lying beyond the last volume sample, which is located at tEnd - tIncr*0.5
