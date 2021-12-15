@@ -72,12 +72,56 @@ uniform bool useNormals = false;
 
 uniform int channel;
 
+// TODO: Better manage all these defines => Move to uniforms and defines controllable by GUI
 #define ERT_THRESHOLD 0.99  // threshold for early ray termination
-#define TRANSLUCENT_THRESHOLD 0.3 // TODO: Make this a uniform in the future
+#define OPAQUE_THRESHOLD 0.99 // Should this be the same as above? => UNIFORM 
+#define TRANSLUCENT_THRESHOLD 0.15 // TODO: Make this a uniform in the future => UNIFORM
+#define SOFT_SHADOWS_SAMPLES 4 // => UNIFORM
+#define R 4 // => UNIFORM
+#define SOFT_SHADOWS_ENABLED // => DEFINE
+#define PI 3.14159265358979
 
 #if (!defined(INCLUDE_DVR) && !defined(INCLUDE_ISOSURFACES))
 #  define INCLUDE_DVR
 #endif
+
+// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
+float radicalInverse_VdC(uint bits) {
+    bits = (bits << 16u) | (bits >> 16u);
+    bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
+    bits = ((bits & 0x33333333u) << 2u) | ((bits & 0xCCCCCCCCu) >> 2u);
+    bits = ((bits & 0x0F0F0F0Fu) << 4u) | ((bits & 0xF0F0F0F0u) >> 4u);
+    bits = ((bits & 0x00FF00FFu) << 8u) | ((bits & 0xFF00FF00u) >> 8u);
+    return float(bits) * 2.3283064365386963e-10; // / 0x100000000
+}
+
+// TODO: Optimize by passing the inverse of N
+// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
+vec2 hammersley2d(uint i, uint N) {
+    return vec2(float(i)/float(N), radicalInverse_VdC(i));
+}
+
+// http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
+vec3 hemisphereSample_uniform(float u, float v) {
+    float phi = v * 2.0 * PI;
+    float cosTheta = 1.0 - u;
+    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+    return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+}
+
+// TODO: Optimize by moving the computation of the basis to the outside of this function
+// TODO: Optimize by not using distance function (use dot() instead)
+vec3 uniformSampleLight(vec3 lightPosition, vec3 voxelPosition, vec2 random) {
+    vec3 uniformSample = hemisphereSample_uniform(random.x, random.y);
+    vec3 x = vec3(1.0, 0.0, 0.0); // FIXME
+    vec3 Z = normalize(voxelPosition - lightPosition);
+    if (distance(x, Z) < 0.01) x = vec3(0.0, 1.0, 0.0);
+    vec3 Y = -normalize(cross(x, Z));
+    vec3 X = cross(Y, Z);
+    mat3 basis = mat3(X, Y, Z);
+    return basis * (R * uniformSample) + lightPosition;
+}
+
 
 void computeRayTraversalParameters(in vec3 rayStart, in vec3 rayEnd, in float samplingRate,
                                    out vec3 rayDirection,
@@ -143,7 +187,6 @@ vec3 applyHardShadows(LightParameters lighting, vec3 samplePosition,
                       vec3 position, vec3 normal, vec3 toCameraDir) {
     vec3 rayStart = samplePosition;
     vec3 rayEnd = (volumeParameters.worldToTexture * vec4(lighting.position, 1.0)).xyz;
-    // intersect shadowray with bounding box to compute exitPoint
     vec3 exitPoint = rayVolumeIntersection(rayStart, rayEnd);
     bool shadowed = shadowRayTraversal(rayStart, exitPoint);
 
@@ -152,12 +195,32 @@ vec3 applyHardShadows(LightParameters lighting, vec3 samplePosition,
                                     position, normal, toCameraDir);
 }
 
-// TODO: Implement
+// TODO: Improve this by interleaving the light samples among the shadow rays (compute upper bound of shadow rays as SOFT_SHADOW_SAMPLES * samples)
 vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition,
                       vec3 materialAmbientColor, vec3 materialDiffuseColor, vec3 materialSpecularColor,
                       vec3 position, vec3 normal, vec3 toCameraDir) {
-    return applyNoShadows(lighting, materialAmbientColor, materialDiffuseColor, materialSpecularColor,
-                          position, normal, toCameraDir);
+    float shadowed = 0.0;
+
+#if defined(SOFT_SHADOWS_ENABLED)
+    vec3 rayStart = samplePosition;
+
+    int shadowedCount = 0;
+    for (int i = 0; i < SOFT_SHADOWS_SAMPLES; ++i) {
+        vec2 random = hammersley2d(i, SOFT_SHADOWS_SAMPLES);
+        vec3 lightSample = uniformSampleLight(lighting.position, samplePosition, random);
+        vec3 rayEnd = (volumeParameters.worldToTexture * vec4(lightSample, 1.0)).xyz;
+        vec3 exitPoint = rayVolumeIntersection(rayStart, rayEnd);
+        if (shadowRayTraversal(rayStart, exitPoint)) ++shadowedCount;
+    }
+
+    shadowed = float(shadowedCount) / SOFT_SHADOWS_SAMPLES;
+#endif
+
+    vec3 lit = APPLY_LIGHTING(lighting, materialAmbientColor, materialDiffuseColor, materialSpecularColor,
+                              position, normal, toCameraDir);
+    vec3 ambient = APPLY_AMBIENT_LIGHTING(lighting, materialAmbientColor);
+    vec3 diff = lit - ambient;
+    return ambient + (1.0 - shadowed) * diff;
 }
 
 
