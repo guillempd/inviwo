@@ -68,7 +68,9 @@ namespace inviwo {
         , lighting_("lighting", "Lighting", &camera_)
         , positionIndicator_("positionindicator", "Position Indicator")
         , toggleShading_(
-            "toggleShading", "Toggle Shading", [this](Event* e) { toggleShading(e); }, IvwKey::L) {
+            "toggleShading", "Toggle Shading", [this](Event* e) { toggleShading(e); }, IvwKey::L)
+        , enableSoftShadows_("enableSoftShadows", "Enable Soft Shadows")
+        , lightDiameter_("lightDiameter", "Light Diameter", 1.0f, 0.1f, 10.0f, Defaultvalues<float>::getInc(), InvalidationLevel::InvalidOutput, PropertySemantics::SpinBox) {
 
         shader_.onReload([this]() { invalidate(InvalidationLevel::InvalidResources); });
 
@@ -130,6 +132,9 @@ namespace inviwo {
         addProperty(lighting_);
         addProperty(positionIndicator_);
         addProperty(toggleShading_);
+
+        addProperty(enableSoftShadows_);
+        addProperty(lightDiameter_);
     }
 
     const ProcessorInfo VolumeRaycasterWithShadows::getProcessorInfo() const { return processorInfo_; }
@@ -183,6 +188,8 @@ namespace inviwo {
         else {
             shader_.setUniform("useNormals", false);
         }
+
+        shader_.setUniform("lightRadius", lightDiameter_ / 2.0f);
 
         utilgl::setUniforms(shader_, outport_, camera_, lighting_, raycasting_, positionIndicator_,
             channel_, isotfComposite_);

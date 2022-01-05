@@ -32,6 +32,9 @@
 #include <modules/basegl/baseglmoduledefine.h>
 
 #include <inviwo/core/processors/poolprocessor.h>
+
+#include <inviwo/core/properties/boolproperty.h>
+#include <inviwo/core/properties/ordinalproperty.h>
 #include <inviwo/core/properties/optionproperty.h>
 #include <inviwo/core/properties/isotfproperty.h>
 #include <inviwo/core/properties/raycastingproperty.h>
@@ -110,6 +113,9 @@ namespace inviwo {
         SimpleLightingProperty lighting_;
         VolumeIndicatorProperty positionIndicator_;
         EventProperty toggleShading_;
+
+        BoolProperty enableSoftShadows_;
+        FloatProperty lightDiameter_;
     };
 
 }  // namespace inviwo

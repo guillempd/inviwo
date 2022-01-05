@@ -72,12 +72,14 @@ uniform bool useNormals = false;
 
 uniform int channel;
 
+uniform float lightRadius;
+
 // TODO: Better manage all these defines => Move to uniforms and defines controllable by GUI
 #define ERT_THRESHOLD 0.99  // threshold for early ray termination
 #define OPAQUE_THRESHOLD 0.99 // Should this be the same as above? => UNIFORM 
 #define TRANSLUCENT_THRESHOLD 0.15 // TODO: Make this a uniform in the future => UNIFORM
 #define SOFT_SHADOWS_SAMPLES 16 // => UNIFORM
-#define R 1 // => UNIFORM
+// #define R 1 // => UNIFORM
 #define SOFT_SHADOWS_ENABLED // => DEFINE
 #define PI 3.14159265358979
 
@@ -200,7 +202,7 @@ vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition, uint sample
     for (int i = 0; i < SOFT_SHADOWS_SAMPLES; ++i) {
         vec2 random = hammersley2d(i * totalSamples + sampleId, SOFT_SHADOWS_SAMPLES * totalSamples);
         vec3 uniformHemisphere = hemisphereSample_uniform(random.x, random.y);
-        vec3 lightSample = basis * (R * uniformHemisphere) + lighting.position;
+        vec3 lightSample = basis * (lightRadius * uniformHemisphere) + lighting.position;
         vec3 rayEnd = (volumeParameters.worldToTexture * vec4(lightSample, 1.0)).xyz;
         vec3 exitPoint = rayVolumeIntersection(rayStart, rayEnd);
         if (shadowRayTraversal(rayStart, exitPoint)) ++shadowedCount;
