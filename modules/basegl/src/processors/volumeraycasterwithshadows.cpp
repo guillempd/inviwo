@@ -70,7 +70,10 @@ namespace inviwo {
         , toggleShading_(
             "toggleShading", "Toggle Shading", [this](Event* e) { toggleShading(e); }, IvwKey::L)
         , enableSoftShadows_("enableSoftShadows", "Enable Soft Shadows")
-        , lightDiameter_("lightDiameter", "Light Diameter", 1.0f, 0.1f, 10.0f, Defaultvalues<float>::getInc(), InvalidationLevel::InvalidOutput, PropertySemantics::SpinBox) {
+        , lightDiameter_("lightDiameter", "Light Diameter", 1.0f, 0.1f, 10.0f)
+        , opaqueThreshold_("opaqueThreshold", "Opaque Threshold", 0.99f, 0.1f, 1.0f)
+        , translucentThreshold_("translucentThreshold", "Translucent Threshold", 0.15f, 0.1f, 1.0f)
+        , softShadowsSamples_("softShadowsSamples", "Soft Shadows Samples", {1, 2, 4, 8, 16, 32}, 3) {
 
         shader_.onReload([this]() { invalidate(InvalidationLevel::InvalidResources); });
 
@@ -135,6 +138,9 @@ namespace inviwo {
 
         addProperty(enableSoftShadows_);
         addProperty(lightDiameter_);
+        addProperty(opaqueThreshold_);
+        addProperty(translucentThreshold_);
+        addProperty(softShadowsSamples_);
     }
 
     const ProcessorInfo VolumeRaycasterWithShadows::getProcessorInfo() const { return processorInfo_; }
@@ -189,7 +195,10 @@ namespace inviwo {
             shader_.setUniform("useNormals", false);
         }
 
-        shader_.setUniform("lightRadius", lightDiameter_ / 2.0f);
+        shader_.setUniform("lightRadius", lightDiameter_.get() / 2.0f);
+        shader_.setUniform("opaqueThreshold", opaqueThreshold_.get());
+        shader_.setUniform("translucentThreshold", translucentThreshold_.get());
+        shader_.setUniform("softShadowsSamples", softShadowsSamples_.get());
 
         utilgl::setUniforms(shader_, outport_, camera_, lighting_, raycasting_, positionIndicator_,
             channel_, isotfComposite_);

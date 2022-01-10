@@ -116,6 +116,9 @@ namespace inviwo {
 
         BoolProperty enableSoftShadows_;
         FloatProperty lightDiameter_;
+        FloatProperty opaqueThreshold_;
+        FloatProperty translucentThreshold_;
+        OptionPropertyInt softShadowsSamples_;
     };
 
 }  // namespace inviwo
