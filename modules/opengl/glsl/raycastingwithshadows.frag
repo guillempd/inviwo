@@ -171,15 +171,20 @@ vec3 applyNoShadows(LightParameters lighting,
 
 vec3 applyHardShadows(LightParameters lighting, vec3 samplePosition,
                       vec3 materialAmbientColor, vec3 materialDiffuseColor, vec3 materialSpecularColor,
-                      vec3 position, vec3 normal, vec3 toCameraDir) {
+                      vec3 position, vec3 normal, vec3 toCameraDir, out bool shouldApplySoftShadows) {
     vec3 rayStart = samplePosition;
     vec3 rayEnd = (volumeParameters.worldToTexture * vec4(lighting.position, 1.0)).xyz;
     vec3 exitPoint = rayVolumeIntersection(rayStart, rayEnd);
     bool shadowed = shadowRayTraversal(rayStart, exitPoint);
 
-    if (shadowed) return APPLY_AMBIENT_LIGHTING(lighting, materialAmbientColor);
-    else return APPLY_LIGHTING(lighting, materialAmbientColor, materialDiffuseColor, materialSpecularColor,
-                                    position, normal, toCameraDir);
+    if (shadowed) {
+        shouldApplySoftShadows = false;
+        return APPLY_AMBIENT_LIGHTING(lighting, materialAmbientColor);
+    }
+    else {
+        shouldApplySoftShadows = true;
+        return vec3(0.0);
+    }
 }
 
 vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition, uint sampleId, uint totalSamples,
@@ -295,12 +300,17 @@ vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgro
             // Note that the gradient is reversed since we define the normal of a surface as
             // the direction towards a lower intensity medium (gradient points in the increasing
             // direction)
-            if (color.a > opaqueThreshold)
-                color.rgb = applyHardShadows(lighting, samplePos, color.rgb, color.rgb, vec3(1.0),
+            if (color.a > translucentThreshold) {
+                bool shouldApplySoftShadows = true;
+                if (color.a > opaqueThreshold) {
+                    vec3 hardShadowColor = applyHardShadows(lighting, samplePos, color.rgb, color.rgb, vec3(1.0),
+                                                            worldSpacePosition, -gradient, toCameraDir, shouldApplySoftShadows);
+                    if (!shouldApplySoftShadows) color.rgb = hardShadowColor;
+                }
+                if (shouldApplySoftShadows)
+                    color.rgb = applySoftShadows(lighting, samplePos, i, int(samples), color.rgb, color.rgb, vec3(1.0),
                                              worldSpacePosition, -gradient, toCameraDir);
-            else if (color.a > translucentThreshold)
-                color.rgb = applySoftShadows(lighting, samplePos, i, int(samples), color.rgb, color.rgb, vec3(1.0),
-                                             worldSpacePosition, -gradient, toCameraDir);
+            }
             else
                 color.rgb = applyNoShadows(lighting, color.rgb, color.rgb, vec3(1.0),
                                             worldSpacePosition, -gradient, toCameraDir);
