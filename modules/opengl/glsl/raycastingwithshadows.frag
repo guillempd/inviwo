@@ -202,6 +202,11 @@ vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition, uint sample
     vec3 X = cross(Y, Z);
     mat3 basis = mat3(X, Y, Z);
 
+    uint fragX = uint(floor(gl_FragCoord.x));
+    uint fragY = uint(floor(gl_FragCoord.y));
+    uint fragmentId = fragY * uint(outportParameters.dimensions.x) + fragX;
+    sampleId = (sampleId + fragmentId) % totalSamples;
+
     int shadowedCount = 0;
     for (int i = 0; i < softShadowsSamples; ++i) {
         vec2 random = hammersley2d(i * totalSamples + sampleId, softShadowsSamples * totalSamples);
