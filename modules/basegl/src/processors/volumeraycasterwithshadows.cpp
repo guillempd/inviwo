@@ -70,6 +70,7 @@ namespace inviwo {
         , toggleShading_(
             "toggleShading", "Toggle Shading", [this](Event* e) { toggleShading(e); }, IvwKey::L)
         , enableSoftShadows_("enableSoftShadows", "Enable Soft Shadows", true, InvalidationLevel::InvalidResources)
+        , enableSoftShadowsOpaque_("enableSoftShadowsOpaque", "Enable Soft Shadows on Opaque Surfaces", false, InvalidationLevel::InvalidResources)
         , lightDiameter_("lightDiameter", "Light Diameter", 1.0f, 0.1f, 10.0f)
         , opaqueThreshold_("opaqueThreshold", "Opaque Threshold", 0.99f, 0.1f, 1.0f)
         , translucentThreshold_("translucentThreshold", "Translucent Threshold", 0.15f, 0.1f, 1.0f)
@@ -132,6 +133,11 @@ namespace inviwo {
             shader_.getFragmentShaderObject()->setShaderDefine("SOFT_SHADOWS_ENABLED", enableSoftShadows_);
             });
 
+        shader_.getFragmentShaderObject()->setShaderDefine("SOFT_SHADOWS_OPAQUE_ENABLED", enableSoftShadowsOpaque_);
+        enableSoftShadowsOpaque_.onChange([this]() {
+            shader_.getFragmentShaderObject()->setShaderDefine("SOFT_SHADOWS_OPAQUE_ENABLED", enableSoftShadowsOpaque_);
+            });
+
         addProperty(channel_);
         addProperty(raycasting_);
         addProperty(isotfComposite_);
@@ -142,6 +148,7 @@ namespace inviwo {
         addProperty(toggleShading_);
 
         addProperty(enableSoftShadows_);
+        addProperty(enableSoftShadowsOpaque_);
         addProperty(lightDiameter_);
         addProperty(opaqueThreshold_);
         addProperty(translucentThreshold_);

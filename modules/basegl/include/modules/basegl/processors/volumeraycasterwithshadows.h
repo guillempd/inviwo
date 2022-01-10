@@ -115,6 +115,7 @@ namespace inviwo {
         EventProperty toggleShading_;
 
         BoolProperty enableSoftShadows_;
+        BoolProperty enableSoftShadowsOpaque_;
         FloatProperty lightDiameter_;
         FloatProperty opaqueThreshold_;
         FloatProperty translucentThreshold_;

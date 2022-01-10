@@ -94,7 +94,6 @@ float radicalInverse_VdC(uint bits) {
     return float(bits) * 2.3283064365386963e-10; // / 0x100000000
 }
 
-// TODO: Optimize by passing the inverse of N
 // http://holger.dammertz.org/stuff/notes_HammersleyOnHemisphere.html
 vec2 hammersley2d(uint i, uint N) {
     return vec2(float(i)/float(N), radicalInverse_VdC(i));
@@ -138,8 +137,6 @@ vec3 rayVolumeIntersection(vec3 rayStart, vec3 rayEnd) {
     return rayStart + tIntersection * rayDirection;
 }
 
-// TODO: Give this a better name
-// TODO: Determine offset
 bool shadowRayTraversal(vec3 rayStart, vec3 rayEnd) {
     vec3 rayDirection;
     float t;
@@ -180,8 +177,13 @@ vec3 applyHardShadows(LightParameters lighting, vec3 samplePosition,
         return APPLY_AMBIENT_LIGHTING(lighting, materialAmbientColor);
     }
     else {
+#if defined(SOFT_SHADOWS_OPAQUE_ENABLED)
         shouldApplySoftShadows = true;
         return vec3(0.0);
+#endif
+        shouldApplySoftShadows = false;
+        return APPLY_LIGHTING(lighting, materialAmbientColor, materialDiffuseColor, materialSpecularColor,
+                              position, normal, toCameraDir);
     }
 }
 
@@ -219,9 +221,6 @@ vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition, uint sample
     vec3 diff = lit - ambient;
     return ambient + (1.0 - shadowed) * diff;
 }
-
-// TODO: Define applySoftShadowsInterleaved for being able to compare vs non-interleaved
-
 
 vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgroundDepth, vec3 entryNormal) {
     vec4 result = vec4(0.0);
