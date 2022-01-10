@@ -124,12 +124,15 @@ void computeRayTraversalParameters(in vec3 rayStart, in vec3 rayEnd, in float sa
     rayDirection /= rayLength;
 }
 
-// Assume rayStart is inside volume and rayEnd is outside volume
+// Assuming rayStart is inside volume and rayEnd is outside volume
+// This function computes the intersection of the given ray with the [0,1]x[0,1]x[0,1] cube
+// This is done by computing the intersection of ray with the 6 planes that form the cube
+// and then finding the intersection that happens first (after rayStart)
 vec3 rayVolumeIntersection(vec3 rayStart, vec3 rayEnd) {
     vec3 rayDirection = rayEnd - rayStart;
     vec3 tIntersection0 = (vec3(1.0f, 1.0f, 1.0f) - rayStart) / rayDirection;
     vec3 tIntersection1 = (vec3(0.0f, 0.0f, 0.0f) - rayStart) / rayDirection;
-    float tIntersection = 2.0f;
+    float tIntersection = 2.0f; // Value big enough to ensure tIntersection ends up with the first one
     for (int c = 0; c < 3; ++c) {
         if (tIntersection0[c] > 0.0 && tIntersection0[c] < tIntersection) tIntersection = tIntersection0[c];
         if (tIntersection1[c] > 0.0 && tIntersection1[c] < tIntersection) tIntersection = tIntersection1[c];
@@ -195,13 +198,15 @@ vec3 applySoftShadows(LightParameters lighting, vec3 samplePosition, uint sample
 #if defined(SOFT_SHADOWS_ENABLED)
     vec3 rayStart = samplePosition;
 
+    // Compute local frame (X,Y,Z) around the light position with the Z-axis pointing towards the sampled voxel
     vec3 x = vec3(1.0, 0.0, 0.0);
-    vec3 Z = normalize(samplePosition - lighting.position);
+    vec3 Z = normalize((volumeParameters.textureToWorld * vec4(samplePosition, 1.0)).xyz - lighting.position);
     if (distance(x, Z) < 0.01) x = vec3(0.0, 1.0, 0.0);
     vec3 Y = -normalize(cross(x, Z));
     vec3 X = cross(Y, Z);
     mat3 basis = mat3(X, Y, Z);
 
+    // Modify the sampleId by using a unique identifier for each fragment in order to obtain less aliasing artifacts
     uint fragX = uint(floor(gl_FragCoord.x));
     uint fragY = uint(floor(gl_FragCoord.y));
     uint fragmentId = fragY * uint(outportParameters.dimensions.x) + fragX;
@@ -309,13 +314,15 @@ vec4 rayTraversal(vec3 entryPoint, vec3 exitPoint, vec2 texCoords, float backgro
                                                             worldSpacePosition, -gradient, toCameraDir, shouldApplySoftShadows);
                     if (!shouldApplySoftShadows) color.rgb = hardShadowColor;
                 }
-                if (shouldApplySoftShadows)
+                if (shouldApplySoftShadows) {
                     color.rgb = applySoftShadows(lighting, samplePos, i, int(samples), color.rgb, color.rgb, vec3(1.0),
-                                             worldSpacePosition, -gradient, toCameraDir);
+                                                 worldSpacePosition, -gradient, toCameraDir);
+                }
             }
-            else
+            else {
                 color.rgb = applyNoShadows(lighting, color.rgb, color.rgb, vec3(1.0),
-                                            worldSpacePosition, -gradient, toCameraDir);
+                                           worldSpacePosition, -gradient, toCameraDir);
+            }
 
             result = APPLY_COMPOSITING(result, color, samplePos, voxel, gradient, camera,
                                        raycaster.isoValue, t, tDepth, tIncr);
