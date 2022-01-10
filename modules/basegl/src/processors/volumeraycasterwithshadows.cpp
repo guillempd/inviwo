@@ -69,7 +69,7 @@ namespace inviwo {
         , positionIndicator_("positionindicator", "Position Indicator")
         , toggleShading_(
             "toggleShading", "Toggle Shading", [this](Event* e) { toggleShading(e); }, IvwKey::L)
-        , enableSoftShadows_("enableSoftShadows", "Enable Soft Shadows")
+        , enableSoftShadows_("enableSoftShadows", "Enable Soft Shadows", true, InvalidationLevel::InvalidResources)
         , lightDiameter_("lightDiameter", "Light Diameter", 1.0f, 0.1f, 10.0f)
         , opaqueThreshold_("opaqueThreshold", "Opaque Threshold", 0.99f, 0.1f, 1.0f)
         , translucentThreshold_("translucentThreshold", "Translucent Threshold", 0.15f, 0.1f, 1.0f)
@@ -125,6 +125,11 @@ namespace inviwo {
                     channel_.set(0);
                 }
             }
+            });
+
+        shader_.getFragmentShaderObject()->setShaderDefine("SOFT_SHADOWS_ENABLED", enableSoftShadows_);
+        enableSoftShadows_.onChange([this]() {
+            shader_.getFragmentShaderObject()->setShaderDefine("SOFT_SHADOWS_ENABLED", enableSoftShadows_);
             });
 
         addProperty(channel_);

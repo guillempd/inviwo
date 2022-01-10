@@ -77,9 +77,7 @@ uniform float opaqueThreshold;
 uniform float translucentThreshold;
 uniform int softShadowsSamples;
 
-// TODO: Better manage all these defines => Move to uniforms and defines controllable by GUI
 #define ERT_THRESHOLD 0.99  // threshold for early ray termination
-#define SOFT_SHADOWS_ENABLED // => DEFINE
 #define PI 3.14159265358979
 
 #if (!defined(INCLUDE_DVR) && !defined(INCLUDE_ISOSURFACES))
